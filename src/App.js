@@ -2,7 +2,7 @@
 import './App.css';
 import app from './firebase.init.';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import { useState } from 'react';
@@ -11,10 +11,11 @@ const auth = getAuth(app)
 
 function App() {
   const [validated, setValidated] = useState(false);
-  const [error, setError]= useState('');
+  const [resister, setResister] = useState(false);
+  const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
- 
+
 
 
 
@@ -26,7 +27,9 @@ function App() {
   const handlePassBlur = (event) => {
     setPassword(event.target.value)
   }
-
+  const handeRegisterChange = event => {
+    setResister(event.target.checked)
+  }
   const handleFormSubmit = (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -36,29 +39,65 @@ function App() {
       return;
 
     }
-    if(!/(?=.*[0-9])/.test(password)){
-setError('Password should at least one digit');
-      return 
+    if (!/(?=.*[0-9])/.test(password)) {
+      setError('Password should at least one digit');
+      return;
 
     }
     setValidated(true);
     setError('');
+    if (resister) {
+      console.log(email, password)
+      signInWithEmailAndPassword(auth, email, password)
+        .then(result => {
+          const user = result.user;
+          console.log(user)
+        })
+        .catch(error => {
+          console.error(error);
+          setError(error.message);
+        })
+    }
+    else {
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(result => {
-        const user = result.user;
-        console.log(user);
-      })
-      .catch(error => {
-        console.error(error);
-      })
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(result => {
+          const user = result.user;
+          console.log(user);
+          setEmail('');
+          setPassword('');
+          verifiyEmail();
+        })
+        .catch(error => {
+          console.error(error);
+          setError(error.message)
+        })
+
+    }
+
     event.preventDefault()
   }
 
+const handlePassReset =()=>{
+  sendPasswordResetEmail(auth, email)
+  .then(()=>{
+    console.log('email sent')
+  })
+
+}
+
+
+const verifiyEmail = ()=>{
+sendEmailVerification(auth.currentUser)
+.then(()=>{
+  console.log('email verification called')
+})
+}
   return (
     <div  >
       <div className='mx-auto w-25'>
-        <h2>Please registration</h2>
+        <h2>Please {resister ? 'Login' : 'Register'}</h2>
         <Form noValidate validated={validated} onSubmit={handleFormSubmit}>
           <Form.Group className="mb-3" controlId="formBasicEmail">
             <Form.Label>Email address</Form.Label>
@@ -79,11 +118,13 @@ setError('Password should at least one digit');
             </Form.Control.Feedback>
           </Form.Group>
           <Form.Group className="mb-3" controlId="formBasicCheckbox">
-            <Form.Check type="checkbox" label="Check me out" />
+            <Form.Check onChange={handeRegisterChange} type="checkbox" label="Already resister" />
           </Form.Group>
+
           <p className='text-danger'>{error}</p>
+          <Button onClick={handlePassReset} variant='link'>Forget password</Button>
           <Button variant="primary" type="submit">
-            Submit
+            {resister ? 'Login' : 'REgister'}
           </Button>
         </Form>
       </div>
